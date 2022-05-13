@@ -3,8 +3,14 @@ name: Go
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - readme.md
+      - .gitignore
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - readme.md
+      - .gitignore
 
 jobs:
 
@@ -29,4 +35,3 @@ jobs:
 
     - name: Fuzz
       run: make fuzz
-  
