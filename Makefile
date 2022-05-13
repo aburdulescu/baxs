@@ -1,3 +1,5 @@
+all: build vet test
+
 build:
 	cd conf && go build
 

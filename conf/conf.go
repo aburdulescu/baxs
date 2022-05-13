@@ -32,16 +32,16 @@ is_simple = true
 
 const example_daemon = `
 # service directory
-service_dir = /home/me/cmds
+service_dir = "/home/me/cmds"
 
 # base path for logs
-log_dir = /var/log/my_daemon
+log_dir = "/var/log/my_daemon"
 
 # unix domain socket path
-socket = /var/run/my_daemon.sock
+socket = "/var/run/my_daemon.sock"
 
 # user to run as
-user = foo
+user = "foo"
 `
 
 // name given by filename
@@ -57,16 +57,21 @@ type Conf struct {
 	values []interface{}
 }
 
-func Parse(r io.Reader) (*Conf, error) {
+func (c *Conf) Parse(r io.Reader) error {
 	var b bytes.Buffer
 	if _, err := io.Copy(&b, r); err != nil {
-		return nil, err
+		return err
 	}
-	var c Conf
 	if err := c.parse(b.Bytes()); err != nil {
-		return nil, err
+		return err
 	}
-	return &c, nil
+	return nil
+}
+
+func (c *Conf) Reset() {
+	c.keys = c.keys[:]
+	c.types = c.types[:]
+	c.values = c.values[:]
 }
 
 const whitespaces = " \t"

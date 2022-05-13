@@ -13,7 +13,8 @@ func TestCommentsAndWhitespaces(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	if _, err := Parse(f); err != nil {
+	var c Conf
+	if err := c.Parse(f); err != nil {
 		t.Fatal("copy failed:", err)
 	}
 }
@@ -24,8 +25,8 @@ func TestKeysAndValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	c, err := Parse(f)
-	if err != nil {
+	var c Conf
+	if err := c.Parse(f); err != nil {
 		t.Fatal(err)
 	}
 	{
@@ -68,9 +69,11 @@ func readFile(f *testing.F, file string) []byte {
 func FuzzConf(f *testing.F) {
 	f.Add(readFile(f, "testdata/comments_and_whitespaces.conf"))
 	f.Add(readFile(f, "testdata/keys_and_values.conf"))
+	var c Conf
 	f.Fuzz(func(t *testing.T, data []byte) {
 		buf := bytes.NewBuffer(data)
-		Parse(buf)
+		c.Parse(buf)
+		c.Reset()
 	})
 }
 
