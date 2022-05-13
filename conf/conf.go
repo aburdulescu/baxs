@@ -51,6 +51,7 @@ restart = true
 `
 
 // TODO: pass struct and use reflection(e.g. like in encoding/json)?
+// TODO: add support for sections
 type Conf struct {
 	keys   []string
 	types  []valueType

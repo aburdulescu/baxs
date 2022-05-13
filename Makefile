@@ -1,9 +1,11 @@
 all: build vet test
 
 build:
+	go build
 	cd conf && go build
 
 vet:
+	go vet
 	cd conf && go vet
 
 test:
