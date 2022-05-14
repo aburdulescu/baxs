@@ -11,5 +11,8 @@ vet:
 test:
 	cd conf && go test -cover
 
+bench:
+	cd conf && go test -run=xxx -bench=. -benchmem
+
 fuzz:
 	cd conf && go test -run=xxx -fuzz=. -fuzztime=20s

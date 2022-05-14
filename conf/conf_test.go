@@ -96,7 +96,7 @@ func TestSections(t *testing.T) {
 	}
 }
 
-func readFile(f *testing.F, file string) []byte {
+func readFile(f testing.TB, file string) []byte {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		f.Fatal(err)
@@ -117,3 +117,39 @@ func FuzzConf(f *testing.F) {
 }
 
 // TODO: benchmarks
+
+func BenchmarkConf(b *testing.B) {
+	data := []byte(`# comment
+
+foo = bar
+
+[sec1]
+key = value
+key2 = value
+key = value
+key2 = value
+key = value
+key2 = value
+key = value
+key2 = value
+
+[sec2]
+key = value
+key2 = value
+key = value
+key2 = value
+key = value
+key2 = value
+
+
+`)
+
+	buf := bytes.NewBuffer(data)
+
+	var c Conf
+
+	for i := 0; i < b.N; i++ {
+		c.Parse(buf)
+		c.Reset()
+	}
+}
