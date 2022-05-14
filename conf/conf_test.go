@@ -58,6 +58,44 @@ func TestKeysAndValues(t *testing.T) {
 	}
 }
 
+func TestSections(t *testing.T) {
+	f, err := os.Open("testdata/sections.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	var c Conf
+	if err := c.Parse(f); err != nil {
+		t.Fatal(err)
+	}
+	{
+		s := c.GetSection("foo")
+		if s == nil {
+			t.Fatal("section not found")
+		}
+		v, err := s.GetString("k")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v != "v" {
+			t.Fatal("wrong value")
+		}
+	}
+	{
+		s := c.GetSection("bar")
+		if s == nil {
+			t.Fatal("section not found")
+		}
+		v, err := s.GetString("k")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v != "v" {
+			t.Fatal("wrong value")
+		}
+	}
+}
+
 func readFile(f *testing.F, file string) []byte {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -69,6 +107,7 @@ func readFile(f *testing.F, file string) []byte {
 func FuzzConf(f *testing.F) {
 	f.Add(readFile(f, "testdata/comments_and_whitespaces.conf"))
 	f.Add(readFile(f, "testdata/keys_and_values.conf"))
+	f.Add(readFile(f, "testdata/sections.conf"))
 	var c Conf
 	f.Fuzz(func(t *testing.T, data []byte) {
 		buf := bytes.NewBuffer(data)
@@ -77,4 +116,4 @@ func FuzzConf(f *testing.F) {
 	})
 }
 
-// TODO: benchmarks, fuzzing
+// TODO: benchmarks
