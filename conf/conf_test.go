@@ -35,7 +35,7 @@ func TestKeysAndValues(t *testing.T) {
 			t.Fatal(err)
 		}
 		if v != "23" {
-			t.Fatal("wrong value")
+			t.Fatal("wrong value:", v)
 		}
 	}
 	{
@@ -44,7 +44,7 @@ func TestKeysAndValues(t *testing.T) {
 			t.Fatal(err)
 		}
 		if v != 42 {
-			t.Fatal("wrong value")
+			t.Fatal("wrong value:", v)
 		}
 	}
 	{
@@ -53,7 +53,7 @@ func TestKeysAndValues(t *testing.T) {
 			t.Fatal(err)
 		}
 		if v != true {
-			t.Fatal("wrong value")
+			t.Fatal("wrong value:", v)
 		}
 	}
 }
@@ -78,7 +78,7 @@ func TestSections(t *testing.T) {
 			t.Fatal(err)
 		}
 		if v != "v" {
-			t.Fatal("wrong value")
+			t.Fatal("wrong value:", v)
 		}
 	}
 	{
@@ -91,7 +91,7 @@ func TestSections(t *testing.T) {
 			t.Fatal(err)
 		}
 		if v != "v" {
-			t.Fatal("wrong value")
+			t.Fatal("wrong value:", v)
 		}
 	}
 }
