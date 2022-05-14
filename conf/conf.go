@@ -90,6 +90,8 @@ func (c *Conf) Parse(r io.Reader) error {
 }
 
 func (c *Conf) Reset() {
+	c.global.reset()
+	c.names = c.names[:]
 	for _, s := range c.sections {
 		s.reset()
 	}
@@ -131,11 +133,6 @@ func parseSection(data []byte, i int) (int, string, error) {
 func (c *Conf) append(name string) {
 	c.names = append(c.names, name)
 	c.sections = append(c.sections, Section{})
-}
-
-func (c *Conf) reset() {
-	c.names = c.names[:]
-	c.sections = c.sections[:]
 }
 
 func (c *Conf) parse(data []byte) error {
