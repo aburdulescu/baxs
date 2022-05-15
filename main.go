@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"bandr.me/baxs/conf"
@@ -33,16 +33,22 @@ func run() error {
 	if err := config.Parse(f); err != nil {
 		return err
 	}
-	log.Println(config)
-	serviceSections := config.GetSections(func(name string) bool {
-		return strings.HasPrefix(name, "service:")
-	})
-	for _, s := range serviceSections {
+	var services []Service
+	for _, s := range config.GetSections(func(name string) bool { return strings.HasPrefix(name, "service:") }) {
 		var svc Service
 		if err := s.To(&svc); err != nil {
 			return err
 		}
-		log.Println(svc)
+		services = append(services, svc)
+	}
+	for _, svc := range services {
+		fmt.Println("run:", svc.Command)
+		args := strings.Split(svc.Command, " ")
+		b, err := exec.Command(args[0], args[1:]...).CombinedOutput()
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
 	}
 	return nil
 }
