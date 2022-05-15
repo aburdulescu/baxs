@@ -96,6 +96,46 @@ func TestSections(t *testing.T) {
 	}
 }
 
+func TestSectionTo(t *testing.T) {
+	data := `
+[foo]
+s = dummy
+i = 42
+b = true
+extra = xx
+`
+	buf := bytes.NewBufferString(data)
+
+	var c Conf
+	if err := c.Parse(buf); err != nil {
+		t.Fatal(err)
+	}
+
+	s := c.GetSection("foo")
+
+	dst := struct {
+		S string `conf:"s"`
+		I int    `conf:"i"`
+		B bool   `conf:"b"`
+		F float64
+		f float64
+	}{}
+
+	if err := s.To(&dst); err != nil {
+		t.Fatal(err)
+	}
+
+	if dst.S != "dummy" {
+		t.Fatalf("wrong value for 'S': %v", dst.S)
+	}
+	if dst.I != 42 {
+		t.Fatalf("wrong value for 'I': %v", dst.I)
+	}
+	if dst.B != true {
+		t.Fatalf("wrong value for 'B': %v", dst.B)
+	}
+}
+
 func readFile(f testing.TB, file string) []byte {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {

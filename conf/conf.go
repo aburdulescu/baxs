@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 )
 
-// TODO: pass struct and use reflection(e.g. like in encoding/json)?
 type Conf struct {
 	global Section
 
@@ -39,6 +39,63 @@ func (s Section) find(k string) int {
 		}
 	}
 	return -1
+}
+func isDstValid(dst any) bool {
+	t := reflect.TypeOf(dst)
+	tt := t.Elem()
+	return t.Kind() == reflect.Pointer && tt.Kind() == reflect.Struct
+}
+
+func (s Section) To(dst any) error {
+	if !isDstValid(dst) {
+		return errors.New("destination must be a pointer to a struct")
+	}
+	v := reflect.Indirect(reflect.ValueOf(dst))
+	if !v.CanAddr() {
+		return errors.New("destination cannot be addressed")
+	}
+	t := reflect.TypeOf(dst).Elem()
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if !f.IsExported() {
+			continue
+		}
+		name, found := f.Tag.Lookup("conf")
+		if !found {
+			continue
+		}
+		switch f.Type.Kind() {
+		case reflect.String:
+			vv, err := s.GetString(name)
+			if err != nil {
+				return fmt.Errorf("struct '%s': field '%s': %v",
+					t.Name(), f.Name, err,
+				)
+			}
+			v.Field(i).SetString(vv)
+		case reflect.Int:
+			vv, err := s.GetInt(name)
+			if err != nil {
+				return fmt.Errorf("struct '%s': field '%s': %v",
+					t.Name(), f.Name, err,
+				)
+			}
+			v.Field(i).SetInt(int64(vv))
+		case reflect.Bool:
+			vv, err := s.GetBool(name)
+			if err != nil {
+				return fmt.Errorf("struct '%s': field '%s': %v",
+					t.Name(), f.Name, err,
+				)
+			}
+			v.Field(i).SetBool(vv)
+		default:
+			return fmt.Errorf("struct '%s': field '%s': type must be one of: %s, %s, %s",
+				t.Name(), f.Name, reflect.String, reflect.Int, reflect.Bool,
+			)
+		}
+	}
+	return nil
 }
 
 func (s Section) GetString(key string) (string, error) {
@@ -193,6 +250,16 @@ func (c Conf) GetSection(name string) *Section {
 		}
 	}
 	return nil
+}
+
+func (c Conf) GetSections(f func(name string) bool) []*Section {
+	var sections []*Section
+	for i, e := range c.names {
+		if f(e) {
+			sections = append(sections, &c.sections[i])
+		}
+	}
+	return sections
 }
 
 func (c Conf) GetString(key string) (string, error) {

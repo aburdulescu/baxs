@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"bandr.me/baxs/conf"
 )
@@ -14,6 +15,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
+}
+
+type Service struct {
+	Command string `conf:"command"`
 }
 
 func run() error {
@@ -29,5 +34,15 @@ func run() error {
 		return err
 	}
 	log.Println(config)
+	serviceSections := config.GetSections(func(name string) bool {
+		return strings.HasPrefix(name, "service:")
+	})
+	for _, s := range serviceSections {
+		var svc Service
+		if err := s.To(&svc); err != nil {
+			return err
+		}
+		log.Println(svc)
+	}
 	return nil
 }
