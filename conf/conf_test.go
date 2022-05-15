@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -15,7 +16,26 @@ func TestCommentsAndWhitespaces(t *testing.T) {
 	defer f.Close()
 	var c Conf
 	if err := c.Parse(f); err != nil {
-		t.Fatal("copy failed:", err)
+		t.Fatal(err)
+	}
+}
+
+func TestGetSections(t *testing.T) {
+	r := bytes.NewBuffer([]byte(`
+[x:a]
+foo = bar
+[x:b]
+foo = bar
+`))
+	var c Conf
+	if err := c.Parse(r); err != nil {
+		t.Fatal(err)
+	}
+	s := c.GetSections(func(name string) bool {
+		return strings.HasPrefix(name, "x:")
+	})
+	if len(s) != 2 {
+		t.Fatal("")
 	}
 }
 
