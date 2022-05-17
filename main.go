@@ -33,8 +33,11 @@ func run() error {
 	if err := config.Parse(f); err != nil {
 		return err
 	}
+	sectionFilter := func(name string) bool {
+		return strings.HasPrefix(name, "service:")
+	}
 	var services []Service
-	for _, s := range config.GetSections(func(name string) bool { return strings.HasPrefix(name, "service:") }) {
+	for _, s := range config.GetSections(sectionFilter) {
 		var svc Service
 		if err := s.To(&svc); err != nil {
 			return err
