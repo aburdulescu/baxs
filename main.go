@@ -26,9 +26,13 @@ type DaemonConf struct {
 
 type ServiceConf struct {
 	Command string `conf:"command"`
+
+	name string
 }
 
 func run() error {
+	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
+
 	configPath := flag.String("c", "./baxs.conf", "path to config file")
 	flag.Parse()
 
@@ -61,29 +65,33 @@ func run() error {
 		if err := s.To(&svc); err != nil {
 			return err
 		}
+		svc.name = strings.Split(s.Name(), ":")[1]
 		services = append(services, svc)
 	}
 
 	os.Mkdir(daemonConf.LogsDir, 0755)
 
-	for _, svc := range services {
-		fmt.Println("run:", svc.Command)
+	pidToSvc := make(map[int]*ServiceConf)
+
+	for i, svc := range services {
+		log.Printf("[%s] starting with command=%s\n", svc.name, svc.Command)
+		outfile, err := os.Create(filepath.Join(daemonConf.LogsDir, svc.name+".out"))
+		if err != nil {
+			return err
+		}
+		errfile, err := os.Create(filepath.Join(daemonConf.LogsDir, svc.name+".err"))
+		if err != nil {
+			return err
+		}
 		args := strings.Split(svc.Command, " ")
-		outfile, err := os.Create(filepath.Join(daemonConf.LogsDir, args[0]+".out"))
-		if err != nil {
-			return err
-		}
-		errfile, err := os.Create(filepath.Join(daemonConf.LogsDir, args[0]+".err"))
-		if err != nil {
-			return err
-		}
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = outfile
 		cmd.Stderr = errfile
 		if err := cmd.Start(); err != nil {
 			return err
 		}
-		log.Printf("%s started with pid %v\n", args[0], cmd.Process.Pid)
+		log.Printf("[%s] started with pid %v\n", svc.name, cmd.Process.Pid)
+		pidToSvc[cmd.Process.Pid] = &services[i]
 	}
 
 	for range services {
@@ -93,15 +101,19 @@ func run() error {
 		if err != nil {
 			return err
 		}
+		svc, found := pidToSvc[wpid]
+		if !found {
+			continue
+		}
 		switch {
 		case ws.Exited():
-			log.Printf("pid %v exited with exit code %d\n", wpid, ws.ExitStatus())
+			log.Printf("[%s] exited with exit code %d\n", svc.name, ws.ExitStatus())
 		case ws.Signaled():
-			log.Printf("pid %v terminated by signal %d\n", wpid, ws.Signal())
+			log.Printf("[%s] terminated by signal %d\n", svc.name, ws.Signal())
 		case ws.Stopped():
-			log.Printf("pid %v stopped by signal %d\n", wpid, ws.StopSignal())
+			log.Printf("[%s] stopped by signal %d\n", svc.name, ws.StopSignal())
 		default:
-			log.Printf("pid %v status %d\n", wpid, ws)
+			log.Printf("[%s] status %d\n", svc.name, ws)
 		}
 	}
 

@@ -18,8 +18,13 @@ type Conf struct {
 }
 
 type Section struct {
+	name   *string
 	keys   []string
 	values []string
+}
+
+func (s Section) Name() string {
+	return *s.name
 }
 
 func (s *Section) reset() {
@@ -40,6 +45,7 @@ func (s Section) find(k string) int {
 	}
 	return -1
 }
+
 func isDstValid(dst any) bool {
 	t := reflect.TypeOf(dst)
 	tt := t.Elem()
@@ -189,7 +195,9 @@ func parseSection(data []byte, i int) (int, string, error) {
 
 func (c *Conf) append(name string) {
 	c.names = append(c.names, name)
-	c.sections = append(c.sections, Section{})
+	c.sections = append(c.sections, Section{
+		name: &c.names[len(c.names)-1],
+	})
 }
 
 func (c *Conf) parse(data []byte) error {
