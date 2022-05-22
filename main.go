@@ -74,7 +74,6 @@ func newWaiter(configPath string) (*Waiter, error) {
 
 	var w Waiter
 
-	var daemonConf DaemonConf
 	if s := config.GetSection("daemon"); s == nil {
 		return nil, fmt.Errorf("'daemon' section not found in config file")
 	} else {
@@ -98,7 +97,9 @@ func newWaiter(configPath string) (*Waiter, error) {
 		})
 	}
 
-	os.Mkdir(daemonConf.LogsDir, 0755)
+	if err := os.MkdirAll(w.daemonConf.LogsDir, 0755); err != nil {
+		return nil, err
+	}
 
 	w.pidToSvc = make(map[int]*Service)
 
@@ -116,6 +117,9 @@ func (w *Waiter) startServices() error {
 			return
 		}
 		for _, svc := range w.services {
+			if svc.cmd == nil {
+				continue
+			}
 			if err := svc.cmd.Process.Kill(); err != nil {
 				log.Printf("[%s] failed to be kill: %v\n", svc.name, err)
 			}
