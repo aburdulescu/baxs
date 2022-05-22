@@ -42,37 +42,57 @@ func run() error {
 	configPath := flag.String("c", "./baxs.conf", "path to config file")
 	flag.Parse()
 
-	f, err := os.Open(*configPath)
+	waiter, err := newWaiter(*configPath)
 	if err != nil {
 		return err
+	}
+
+	if err := waiter.wait(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type Waiter struct {
+	daemonConf DaemonConf
+	services   []Service
+	pidToSvc   map[int]*Service
+}
+
+func newWaiter(configPath string) (*Waiter, error) {
+	f, err := os.Open(configPath)
+	if err != nil {
+		return nil, err
 	}
 	defer f.Close()
 
 	var config conf.Conf
 	if err := config.Parse(f); err != nil {
-		return err
+		return nil, err
 	}
+
+	var w Waiter
 
 	var daemonConf DaemonConf
 	if s := config.GetSection("daemon"); s == nil {
-		return fmt.Errorf("'daemon' section not found in config file")
+		return nil, fmt.Errorf("'daemon' section not found in config file")
 	} else {
-		if err := s.To(&daemonConf); err != nil {
-			return err
+		if err := s.To(&w.daemonConf); err != nil {
+			return nil, err
 		}
 	}
 
 	sectionFilter := func(name string) bool {
 		return strings.HasPrefix(name, "service:")
 	}
-	var services []Service
 	for _, s := range config.GetSections(sectionFilter) {
 		var svc ServiceConf
 		if err := s.To(&svc); err != nil {
-			return err
+			return nil, err
 		}
 		name := strings.Split(s.Name(), ":")[1]
-		services = append(services, Service{
+		w.services = append(w.services, Service{
 			name: name,
 			conf: svc,
 		})
@@ -80,36 +100,74 @@ func run() error {
 
 	os.Mkdir(daemonConf.LogsDir, 0755)
 
-	pidToSvc := make(map[int]*Service)
+	w.pidToSvc = make(map[int]*Service)
 
-	for i, svc := range services {
+	if err := w.startServices(); err != nil {
+		return nil, err
+	}
+
+	return &w, nil
+}
+
+func (w *Waiter) startServices() error {
+	var err error
+	defer func() {
+		if err == nil {
+			return
+		}
+		for _, svc := range w.services {
+			if err := svc.cmd.Process.Kill(); err != nil {
+				log.Printf("[%s] failed to be kill: %v\n", svc.name, err)
+			}
+			log.Printf("[%s] kill signal sent\n", svc.name)
+			if err := svc.cmd.Wait(); err != nil {
+				log.Printf("[%s] failed to be wait: %v\n", svc.name, err)
+			}
+		}
+	}()
+
+	for i, svc := range w.services {
 		log.Printf("[%s] starting with command=%s\n", svc.name, svc.conf.Command)
-		outfile, err := os.Create(filepath.Join(daemonConf.LogsDir, svc.name+".out"))
+
+		var outfile *os.File
+		outfile, err = os.Create(filepath.Join(w.daemonConf.LogsDir, svc.name+".out"))
 		if err != nil {
 			return err
 		}
-		errfile, err := os.Create(filepath.Join(daemonConf.LogsDir, svc.name+".err"))
+
+		var errfile *os.File
+		errfile, err = os.Create(filepath.Join(w.daemonConf.LogsDir, svc.name+".err"))
 		if err != nil {
 			return err
 		}
+
 		args := strings.Split(svc.conf.Command, " ")
+
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = outfile
 		cmd.Stderr = errfile
-		if err := cmd.Start(); err != nil {
+
+		err = cmd.Start()
+		if err != nil {
 			return err
 		}
+
 		log.Printf("[%s] started with pid %v\n", svc.name, cmd.Process.Pid)
-		services[i].cmd = cmd
-		pidToSvc[cmd.Process.Pid] = &services[i]
+
+		w.services[i].cmd = cmd
+		w.pidToSvc[cmd.Process.Pid] = &w.services[i]
 	}
 
+	return nil
+}
+
+func (w *Waiter) wait() error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-c
 		log.Println("received signal", sig)
-		for _, svc := range services {
+		for _, svc := range w.services {
 			if err := svc.cmd.Process.Kill(); err != nil {
 				log.Printf("[%s] failed to be kill: %v\n", svc.name, err)
 			}
@@ -121,14 +179,14 @@ func run() error {
 		os.Exit(1)
 	}()
 
-	for range services {
+	for range w.services {
 		var ws unix.WaitStatus
 		var ru unix.Rusage // TODO: use it
 		wpid, err := unix.Wait4(-1, &ws, 0, &ru)
 		if err != nil {
 			return err
 		}
-		svc, found := pidToSvc[wpid]
+		svc, found := w.pidToSvc[wpid]
 		if !found {
 			continue
 		}
@@ -146,14 +204,6 @@ func run() error {
 
 	return nil
 }
-
-// type Waiter struct{}
-
-// func newWaiter() (*Waiter, error) {
-// 	return &Waiter{}
-// }
-
-// func (w *Waiter) wait() error {}
 
 // type Server struct{}
 
