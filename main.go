@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"bandr.me/baxs/conf"
 	"golang.org/x/sys/unix"
@@ -26,8 +28,12 @@ type DaemonConf struct {
 
 type ServiceConf struct {
 	Command string `conf:"command"`
+}
 
+type Service struct {
+	cmd  *exec.Cmd
 	name string
+	conf ServiceConf
 }
 
 func run() error {
@@ -59,22 +65,25 @@ func run() error {
 	sectionFilter := func(name string) bool {
 		return strings.HasPrefix(name, "service:")
 	}
-	var services []ServiceConf
+	var services []Service
 	for _, s := range config.GetSections(sectionFilter) {
 		var svc ServiceConf
 		if err := s.To(&svc); err != nil {
 			return err
 		}
-		svc.name = strings.Split(s.Name(), ":")[1]
-		services = append(services, svc)
+		name := strings.Split(s.Name(), ":")[1]
+		services = append(services, Service{
+			name: name,
+			conf: svc,
+		})
 	}
 
 	os.Mkdir(daemonConf.LogsDir, 0755)
 
-	pidToSvc := make(map[int]*ServiceConf)
+	pidToSvc := make(map[int]*Service)
 
 	for i, svc := range services {
-		log.Printf("[%s] starting with command=%s\n", svc.name, svc.Command)
+		log.Printf("[%s] starting with command=%s\n", svc.name, svc.conf.Command)
 		outfile, err := os.Create(filepath.Join(daemonConf.LogsDir, svc.name+".out"))
 		if err != nil {
 			return err
@@ -83,7 +92,7 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		args := strings.Split(svc.Command, " ")
+		args := strings.Split(svc.conf.Command, " ")
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = outfile
 		cmd.Stderr = errfile
@@ -91,8 +100,26 @@ func run() error {
 			return err
 		}
 		log.Printf("[%s] started with pid %v\n", svc.name, cmd.Process.Pid)
+		services[i].cmd = cmd
 		pidToSvc[cmd.Process.Pid] = &services[i]
 	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-c
+		log.Println("received signal", sig)
+		for _, svc := range services {
+			if err := svc.cmd.Process.Kill(); err != nil {
+				log.Printf("[%s] failed to be kill: %v\n", svc.name, err)
+			}
+			log.Printf("[%s] kill signal sent\n", svc.name)
+			if err := svc.cmd.Wait(); err != nil {
+				log.Printf("[%s] failed to be wait: %v\n", svc.name, err)
+			}
+		}
+		os.Exit(1)
+	}()
 
 	for range services {
 		var ws unix.WaitStatus
@@ -119,3 +146,19 @@ func run() error {
 
 	return nil
 }
+
+// type Waiter struct{}
+
+// func newWaiter() (*Waiter, error) {
+// 	return &Waiter{}
+// }
+
+// func (w *Waiter) wait() error {}
+
+// type Server struct{}
+
+// func newServer() *Server {
+// 	return &Server{}
+// }
+
+// func (s *Server) run() {}
