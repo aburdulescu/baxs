@@ -77,14 +77,10 @@ func newWaiter(configPath string) (*Waiter, error) {
 
 	w.pidToSvc = make(map[int]*Service)
 
-	if err := w.startServices(); err != nil {
-		return nil, err
-	}
-
 	return &w, nil
 }
 
-func (w *Waiter) startServices() error {
+func (w *Waiter) start() error {
 	var err error
 	defer func() {
 		if err == nil {

@@ -71,6 +71,10 @@ Flags:`)
 		return err
 	}
 
+	if err := waiter.start(); err != nil {
+		return err
+	}
+
 	if err := waiter.wait(); err != nil {
 		return err
 	}
