@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"os"
 	"os/exec"
@@ -10,28 +10,32 @@ import (
 	"strings"
 	"syscall"
 
-	"bandr.me/baxs/conf"
 	"golang.org/x/sys/unix"
 )
 
-type DaemonConf struct {
-	LogsDir string `conf:"logs_dir"`
+type Config struct {
+	Daemon   DaemonConfig
+	Services []ServiceConfig
 }
 
-type ServiceConf struct {
-	Command string `conf:"command"`
+type DaemonConfig struct {
+	LogsDir string
+}
+
+type ServiceConfig struct {
+	Name    string
+	Command string
 }
 
 type Service struct {
-	cmd  *exec.Cmd
-	name string
-	conf ServiceConf
+	cmd    *exec.Cmd
+	config ServiceConfig
 }
 
 type Waiter struct {
-	daemonConf DaemonConf
-	services   []Service
-	pidToSvc   map[int]*Service
+	daemonConfig DaemonConfig
+	services     []Service
+	pidToSvc     map[int]*Service
 }
 
 func newWaiter(configPath string) (*Waiter, error) {
@@ -41,37 +45,22 @@ func newWaiter(configPath string) (*Waiter, error) {
 	}
 	defer f.Close()
 
-	var config conf.Conf
-	if err := config.Parse(f); err != nil {
+	var config Config
+	if err := json.NewDecoder(f).Decode(&config); err != nil {
 		return nil, err
 	}
 
 	var w Waiter
 
-	if s := config.GetSection("daemon"); s == nil {
-		return nil, fmt.Errorf("'daemon' section not found in config file")
-	} else {
-		if err := s.To(&w.daemonConf); err != nil {
-			return nil, err
-		}
-	}
+	w.daemonConfig = config.Daemon
 
-	sectionFilter := func(name string) bool {
-		return strings.HasPrefix(name, "service:")
-	}
-	for _, s := range config.GetSections(sectionFilter) {
-		var svc ServiceConf
-		if err := s.To(&svc); err != nil {
-			return nil, err
-		}
-		name := strings.Split(s.Name(), ":")[1]
+	for _, s := range config.Services {
 		w.services = append(w.services, Service{
-			name: name,
-			conf: svc,
+			config: s,
 		})
 	}
 
-	if err := os.MkdirAll(w.daemonConf.LogsDir, 0755); err != nil {
+	if err := os.MkdirAll(w.daemonConfig.LogsDir, 0755); err != nil {
 		return nil, err
 	}
 
@@ -91,31 +80,31 @@ func (w *Waiter) start() error {
 				continue
 			}
 			if err := svc.cmd.Process.Kill(); err != nil {
-				log.Printf("[%s] failed to be kill: %v\n", svc.name, err)
+				log.Printf("[%s] failed to be kill: %v\n", svc.config.Name, err)
 			}
-			log.Printf("[%s] kill signal sent\n", svc.name)
+			log.Printf("[%s] kill signal sent\n", svc.config.Name)
 			if err := svc.cmd.Wait(); err != nil {
-				log.Printf("[%s] failed to be wait: %v\n", svc.name, err)
+				log.Printf("[%s] failed to be wait: %v\n", svc.config.Name, err)
 			}
 		}
 	}()
 
 	for i, svc := range w.services {
-		log.Printf("[%s] starting with command=%s\n", svc.name, svc.conf.Command)
+		log.Printf("[%s] starting with command=%s\n", svc.config.Name, svc.config.Command)
 
 		var outfile *os.File
-		outfile, err = os.Create(filepath.Join(w.daemonConf.LogsDir, svc.name+".out"))
+		outfile, err = os.Create(filepath.Join(w.daemonConfig.LogsDir, svc.config.Name+".out"))
 		if err != nil {
 			return err
 		}
 
 		var errfile *os.File
-		errfile, err = os.Create(filepath.Join(w.daemonConf.LogsDir, svc.name+".err"))
+		errfile, err = os.Create(filepath.Join(w.daemonConfig.LogsDir, svc.config.Name+".err"))
 		if err != nil {
 			return err
 		}
 
-		args := strings.Split(svc.conf.Command, " ")
+		args := strings.Split(svc.config.Command, " ")
 
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = outfile
@@ -126,7 +115,7 @@ func (w *Waiter) start() error {
 			return err
 		}
 
-		log.Printf("[%s] started with pid %v\n", svc.name, cmd.Process.Pid)
+		log.Printf("[%s] started with pid %v\n", svc.config.Name, cmd.Process.Pid)
 
 		w.services[i].cmd = cmd
 		w.pidToSvc[cmd.Process.Pid] = &w.services[i]
@@ -143,11 +132,11 @@ func (w *Waiter) wait() error {
 		log.Println("received signal", sig)
 		for _, svc := range w.services {
 			if err := svc.cmd.Process.Kill(); err != nil {
-				log.Printf("[%s] failed to be kill: %v\n", svc.name, err)
+				log.Printf("[%s] failed to be kill: %v\n", svc.config.Name, err)
 			}
-			log.Printf("[%s] kill signal sent\n", svc.name)
+			log.Printf("[%s] kill signal sent\n", svc.config.Name)
 			if err := svc.cmd.Wait(); err != nil {
-				log.Printf("[%s] failed to be wait: %v\n", svc.name, err)
+				log.Printf("[%s] failed to be wait: %v\n", svc.config.Name, err)
 			}
 		}
 		os.Exit(1)
@@ -166,13 +155,13 @@ func (w *Waiter) wait() error {
 		}
 		switch {
 		case ws.Exited():
-			log.Printf("[%s] exited with exit code %d\n", svc.name, ws.ExitStatus())
+			log.Printf("[%s] exited with exit code %d\n", svc.config.Name, ws.ExitStatus())
 		case ws.Signaled():
-			log.Printf("[%s] terminated by signal %d\n", svc.name, ws.Signal())
+			log.Printf("[%s] terminated by signal %d\n", svc.config.Name, ws.Signal())
 		case ws.Stopped():
-			log.Printf("[%s] stopped by signal %d\n", svc.name, ws.StopSignal())
+			log.Printf("[%s] stopped by signal %d\n", svc.config.Name, ws.StopSignal())
 		default:
-			log.Printf("[%s] status %d\n", svc.name, ws)
+			log.Printf("[%s] status %d\n", svc.config.Name, ws)
 		}
 	}
 

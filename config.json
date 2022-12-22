@@ -1,0 +1,11 @@
+{
+  "Daemon": {
+    "LogsDir": "./logs"
+  },
+  "Services": [
+    {
+      "Name": "lists",
+      "Command": "/home/bandr/p/lists/cmd/lists/lists -db /home/bandr/p/lists/db.new"
+    }
+  ]
+}
