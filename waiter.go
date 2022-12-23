@@ -132,14 +132,14 @@ func (w *Waiter) wait() error {
 		log.Println("received signal", sig)
 		for _, svc := range w.services {
 			if err := svc.cmd.Process.Kill(); err != nil {
-				log.Printf("[%s] failed to be kill: %v\n", svc.config.Name, err)
+				log.Printf("[%s] failed to kill: %v\n", svc.config.Name, err)
 			}
 			log.Printf("[%s] kill signal sent\n", svc.config.Name)
 			if err := svc.cmd.Wait(); err != nil {
-				log.Printf("[%s] failed to be wait: %v\n", svc.config.Name, err)
+				log.Printf("[%s] failed to wait: %v\n", svc.config.Name, err)
 			}
 		}
-		os.Exit(1)
+		os.Exit(127 + int(sig.(syscall.Signal)))
 	}()
 
 	for range w.services {

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 )
 
@@ -83,6 +84,13 @@ Flags:`)
 		return err
 	}
 
+	ipcServer, err := newIPCServer()
+	if err != nil {
+		return err
+	}
+
+	go ipcServer.start()
+
 	if err := waiter.start(); err != nil {
 		return err
 	}
@@ -95,5 +103,11 @@ Flags:`)
 }
 
 func runCtl(args []string) error {
-	return fmt.Errorf("not implemented")
+	conn, err := net.Dial("unix", daemonSocketFile)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	_, err = conn.Write([]byte(args[0]))
+	return err
 }
