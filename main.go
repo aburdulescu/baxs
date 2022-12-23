@@ -1,13 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net"
 	"os"
 )
 
@@ -29,7 +25,7 @@ Commands:
     help      print this message
     version   print version information
     daemon    start daemon
-    ctl       control services
+    ls        list services
 
 Globals flags:
     -h, --help    print this message
@@ -57,8 +53,8 @@ func mainErr() error {
 		return nil
 	case "daemon":
 		return runDaemon(args)
-	case "ctl":
-		return runCtl(args)
+	case "ls":
+		return runLs(args)
 	default:
 		return fmt.Errorf("unknown command '%s'", cmd)
 	}
@@ -105,30 +101,14 @@ Flags:`)
 	return nil
 }
 
-func runCtl(args []string) error {
-	conn, err := net.Dial("unix", daemonSocketFile)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
+func runLs(args []string) error {
 	req := IPCRequest{
 		Cmd: "ls",
 	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(req); err != nil {
-		return err
-	}
-	if _, err := io.Copy(conn, buf); err != nil {
-		return err
-	}
-	buf.Reset()
-	if _, err := io.Copy(buf, conn); err != nil {
-		return err
-	}
-	var rsp IPCResponse
-	if err := json.NewDecoder(buf).Decode(&rsp); err != nil {
+	rsp, err := execIPCRequest(req)
+	if err != nil {
 		return err
 	}
 	fmt.Println(rsp)
-	return err
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log"
@@ -76,4 +77,28 @@ type IPCRequest struct {
 type IPCResponse struct {
 	Err  string
 	Data any
+}
+
+func execIPCRequest(req IPCRequest) (*IPCResponse, error) {
+	conn, err := net.Dial("unix", daemonSocketFile)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(req); err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(conn, buf); err != nil {
+		return nil, err
+	}
+	buf.Reset()
+	if _, err := io.Copy(buf, conn); err != nil {
+		return nil, err
+	}
+	var rsp IPCResponse
+	if err := json.NewDecoder(buf).Decode(&rsp); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
 }
