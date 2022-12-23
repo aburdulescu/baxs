@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -108,6 +111,24 @@ func runCtl(args []string) error {
 		return err
 	}
 	defer conn.Close()
-	_, err = conn.Write([]byte(args[0]))
+	req := IPCRequest{
+		Cmd: "ls",
+	}
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(req); err != nil {
+		return err
+	}
+	if _, err := io.Copy(conn, buf); err != nil {
+		return err
+	}
+	buf.Reset()
+	if _, err := io.Copy(buf, conn); err != nil {
+		return err
+	}
+	var rsp IPCResponse
+	if err := json.NewDecoder(buf).Decode(&rsp); err != nil {
+		return err
+	}
+	fmt.Println(rsp)
 	return err
 }

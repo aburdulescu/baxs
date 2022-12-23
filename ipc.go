@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -52,5 +53,27 @@ func handleIPCConn(conn net.Conn) {
 		log.Println(err)
 		return
 	}
-	log.Println(n, string(b))
+	var req IPCRequest
+	if err := json.Unmarshal(b[:n], &req); err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(req)
+	rsp := IPCResponse{
+		Err: "here be dragons",
+	}
+	if err := json.NewEncoder(conn).Encode(rsp); err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+type IPCRequest struct {
+	Cmd  string
+	Data any
+}
+
+type IPCResponse struct {
+	Err  string
+	Data any
 }
