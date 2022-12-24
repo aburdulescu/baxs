@@ -48,7 +48,6 @@ func mainErr() error {
 		if !ok {
 			return fmt.Errorf("failed to read build info")
 		}
-		fmt.Println(bi)
 		fmt.Printf(
 			"%s %s %s %s %s %s\n",
 			bi.Main.Version,
