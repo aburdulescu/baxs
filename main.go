@@ -48,8 +48,7 @@ func mainErr() error {
 		if !ok {
 			return fmt.Errorf("failed to read build info")
 		}
-		fmt.Printf(
-			"%s %s %s %s %s %s\n",
+		fmt.Println(
 			bi.Main.Version,
 			bi.GoVersion,
 			findBuildSetting(bi.Settings, "GOOS"),
