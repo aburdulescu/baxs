@@ -9,29 +9,29 @@ import (
 	"os"
 )
 
-type IPCServer struct {
+type IPCDaemon struct {
 	l net.Listener
 }
 
 const daemonSocketFile = "/tmp/baxs.sock"
 
-func newIPCServer() (*IPCServer, error) {
+func newIPCDaemon() (*IPCDaemon, error) {
 	os.Remove(daemonSocketFile)
 	l, err := net.Listen("unix", daemonSocketFile)
 	if err != nil {
 		return nil, err
 	}
-	s := &IPCServer{
+	s := &IPCDaemon{
 		l: l,
 	}
 	return s, nil
 }
 
-func (s IPCServer) Close() error {
+func (s IPCDaemon) Close() error {
 	return s.l.Close()
 }
 
-func (s IPCServer) start() {
+func (s IPCDaemon) start() {
 	defer s.Close()
 	for {
 		conn, err := s.l.Accept()

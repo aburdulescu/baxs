@@ -83,12 +83,12 @@ Flags:`)
 		return err
 	}
 
-	ipcServer, err := newIPCServer()
+	ipcDaemon, err := newIPCDaemon()
 	if err != nil {
 		return err
 	}
 
-	go ipcServer.start()
+	go ipcDaemon.start()
 
 	if err := waiter.start(); err != nil {
 		return err
