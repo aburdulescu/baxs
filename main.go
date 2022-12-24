@@ -5,11 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-)
-
-var (
-	versionCommit = "none"
-	versionDate   = "none"
+	"runtime/debug"
 )
 
 func main() {
@@ -48,8 +44,20 @@ func mainErr() error {
 		fmt.Print(usage)
 		return nil
 	case "version", "--version":
-		fmt.Println("Commit:", versionCommit)
-		fmt.Println("Date:", versionDate)
+		bi, ok := debug.ReadBuildInfo()
+		if !ok {
+			return fmt.Errorf("failed to read build info")
+		}
+		fmt.Println(bi)
+		fmt.Printf(
+			"%s %s %s %s %s %s\n",
+			bi.Main.Version,
+			bi.GoVersion,
+			findBuildSetting(bi.Settings, "GOOS"),
+			findBuildSetting(bi.Settings, "GOARCH"),
+			findBuildSetting(bi.Settings, "vcs.revision"),
+			findBuildSetting(bi.Settings, "vcs.time"),
+		)
 		return nil
 	case "daemon":
 		return runDaemon(args)
@@ -58,6 +66,15 @@ func mainErr() error {
 	default:
 		return fmt.Errorf("unknown command '%s'", cmd)
 	}
+}
+
+func findBuildSetting(settings []debug.BuildSetting, key string) string {
+	for _, v := range settings {
+		if v.Key == key {
+			return v.Value
+		}
+	}
+	return ""
 }
 
 func runDaemon(args []string) error {
