@@ -13,20 +13,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type Config struct {
-	Daemon   DaemonConfig
-	Services []ServiceConfig
-}
-
-type DaemonConfig struct {
-	LogsDir string
-}
-
-type ServiceConfig struct {
-	Name    string
-	Command string
-}
-
 type Service struct {
 	cmd    *exec.Cmd
 	config ServiceConfig
