@@ -1,22 +1,22 @@
-package main
+package config
 
 // Config specifies the configuration parameters needed by the daemon at startup
 type Config struct {
 	// Daemon configuration
-	Daemon DaemonConfig
+	Daemon Daemon
 
 	// List of services
-	Services []ServiceConfig
+	Services []Service
 }
 
-// DaemonConfig specifies the configuration parameters of the daemon
-type DaemonConfig struct {
+// Daemon specifies the configuration parameters of the daemon
+type Daemon struct {
 	// Path where to save the logs of the daemon and the services
 	LogsDir string
 }
 
-// ServiceConfig specifies the configuration parameters of a service
-type ServiceConfig struct {
+// Service specifies the configuration parameters of a service
+type Service struct {
 	// Service name, must be unique
 	Name string
 

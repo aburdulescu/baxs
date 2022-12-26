@@ -1,4 +1,4 @@
-package main
+package waiter
 
 import (
 	"encoding/json"
@@ -10,28 +10,30 @@ import (
 	"strings"
 	"syscall"
 
+	"bandr.me/p/baxs/internal/config"
+
 	"golang.org/x/sys/unix"
 )
 
 type Service struct {
 	cmd    *exec.Cmd
-	config ServiceConfig
+	config config.Service
 }
 
 type Waiter struct {
-	daemonConfig DaemonConfig
+	daemonConfig config.Daemon
 	services     []Service
 	pidToSvc     map[int]*Service
 }
 
-func newWaiter(configPath string) (*Waiter, error) {
+func New(configPath string) (*Waiter, error) {
 	f, err := os.Open(configPath)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var config Config
+	var config config.Config
 	if err := json.NewDecoder(f).Decode(&config); err != nil {
 		return nil, err
 	}
@@ -55,7 +57,7 @@ func newWaiter(configPath string) (*Waiter, error) {
 	return &w, nil
 }
 
-func (w *Waiter) start() error {
+func (w *Waiter) Start() error {
 	var err error
 	defer func() {
 		if err == nil {
@@ -110,7 +112,7 @@ func (w *Waiter) start() error {
 	return nil
 }
 
-func (w *Waiter) wait() error {
+func (w *Waiter) Wait() error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

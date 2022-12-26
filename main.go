@@ -6,6 +6,9 @@ import (
 	"log"
 	"os"
 	"runtime/debug"
+
+	"bandr.me/p/baxs/internal/ipc"
+	"bandr.me/p/baxs/internal/waiter"
 )
 
 func main() {
@@ -93,23 +96,23 @@ Flags:`)
 		return fmt.Errorf("path to config file not specified")
 	}
 
-	waiter, err := newWaiter(*configPath)
+	waiter, err := waiter.New(*configPath)
 	if err != nil {
 		return err
 	}
 
-	ipcDaemon, err := newIPCDaemon()
+	ipcDaemon, err := ipc.NewDaemon()
 	if err != nil {
 		return err
 	}
 
-	go ipcDaemon.start()
+	go ipcDaemon.Start()
 
-	if err := waiter.start(); err != nil {
+	if err := waiter.Start(); err != nil {
 		return err
 	}
 
-	if err := waiter.wait(); err != nil {
+	if err := waiter.Wait(); err != nil {
 		return err
 	}
 
@@ -117,13 +120,10 @@ Flags:`)
 }
 
 func runLs(args []string) error {
-	req := IPCRequest{
-		Cmd: "ls",
-	}
-	rsp, err := execIPCRequest(req)
+	services, err := ipc.Ls()
 	if err != nil {
 		return err
 	}
-	fmt.Println(rsp)
+	fmt.Println(services)
 	return nil
 }
