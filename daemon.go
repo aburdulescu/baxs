@@ -10,7 +10,7 @@ import (
 	"strings"
 	"syscall"
 
-	"baxs/ipc"
+	"bandr.me/p/baxs/ipc"
 )
 
 type Daemon struct {

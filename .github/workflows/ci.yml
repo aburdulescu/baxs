@@ -25,4 +25,4 @@ jobs:
         go-version: 1.19
 
     - name: All
-      run: make
+      run: make release

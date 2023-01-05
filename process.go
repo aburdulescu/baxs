@@ -9,7 +9,7 @@ import (
 	"sync"
 	"syscall"
 
-	"baxs/ipc"
+	"bandr.me/p/baxs/ipc"
 )
 
 type ProcessState uint8

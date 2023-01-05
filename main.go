@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"text/tabwriter"
 
-	"baxs/ipc"
+	"bandr.me/p/baxs/ipc"
 )
 
 func main() {
