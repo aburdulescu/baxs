@@ -117,8 +117,8 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 
 	rsp := ipc.Response{}
 	switch req.Op {
-	case ipc.OpLs:
-		rsp.Data = d.procs.Ls()
+	case ipc.OpPs:
+		rsp.Data = d.procs.Ps()
 	case ipc.OpStop:
 		names, ok := req.Data.([]any)
 		if !ok {

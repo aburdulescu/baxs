@@ -2,24 +2,36 @@
 
 Background service supervisor.
 
-## Config file syntax
+## Config file syntax(`baxsfile`)
 
-Similar to [Procfile](https://devcenter.heroku.com/articles/procfile)
-(i.e. `<service name>: <command>`) but with support for line comments:
+The config file consists of lines of text.
+
+A line can be a comment or a service definition.
+
+A comment starts with a `#`, leading whitespaces(spaces or tabs) are ignored.
+What follows after `#` is the body of the comment.
+
+`# this is a comment`
+
+A service definition has the following form:
+
+`<service name>: <command>`
+
+Example:
 
 ```
-# this is a comment
+# run a nginx webserver
+nginx: /usr/sbin/nginx
 
-service1: foo bar baz
-
-service2: fooz barz bazz
+# some other service
+random service: foo bar baz
 ```
 
 ## Features
 
 - command is not run in a shell => no expansion of env variables and glob patterns
 
-- logs written to central logs dir; stdout and stderr in the same file
+- logs written to central logs dir, one per service(stdout and stderr in the same file)
 
 - daemon will log to stdout and will be controlled via the system process supervisor(e.g. systemd)
 

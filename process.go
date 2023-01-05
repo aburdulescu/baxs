@@ -186,12 +186,12 @@ func (pt *ProcessTable) Stop(name string) error {
 	return fmt.Errorf("cannot find service with name: %v", name)
 }
 
-func (pt *ProcessTable) Ls() []ipc.LsResult {
+func (pt *ProcessTable) Ps() []ipc.PsResult {
 	pt.mu.Lock()
 	defer pt.mu.Unlock()
-	var result []ipc.LsResult
+	var result []ipc.PsResult
 	for _, p := range pt.procs {
-		result = append(result, ipc.LsResult{
+		result = append(result, ipc.PsResult{
 			Name:   p.Name,
 			Status: p.State.String(),
 		})

@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestLs(t *testing.T) {
-	_, err := Ls()
+func TestPs(t *testing.T) {
+	_, err := Ps()
 	t.Log(err)
 }
 

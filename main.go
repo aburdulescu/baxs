@@ -27,7 +27,7 @@ Options:
 
 Commands:
   daemon  Start the daemon
-  ls      List available services
+  ps      List available services
   stop    Stop service(s)
   start   Start service(s)
 
@@ -67,8 +67,8 @@ Run 'baxs <command> -h' for more information about a command.
 	switch cmd {
 	case "daemon":
 		return runDaemon(args)
-	case "ls":
-		return runLs(args)
+	case "ps":
+		return runPs(args)
 	case "stop":
 		return runStop(args)
 	case "start":
@@ -85,8 +85,9 @@ func runDaemon(args []string) error {
 		fmt.Fprint(os.Stderr, `Usage: baxs daemon [options]
 
 Options:
-  -l  Base directory for logs
-  -f  Path to baxsfile
+  -h, --help  Print this message
+  -l          Base directory for logs
+  -f          Path to baxsfile
 
 `)
 	}
@@ -116,25 +117,82 @@ Options:
 	return daemon.Run()
 }
 
-func runLs(args []string) error {
-	services, err := ipc.Ls()
+func runPs(args []string) error {
+	fset := flag.NewFlagSet("ls", flag.ExitOnError)
+
+	fset.Usage = func() {
+		fmt.Fprint(os.Stderr, `Usage: baxs ps [options]
+
+Print available services and their status.
+
+Options:
+  -h, --help  Print this message
+
+`)
+	}
+
+	if err := fset.Parse(args); err != nil {
+		return err
+	}
+
+	services, err := ipc.Ps()
 	if err != nil {
 		return err
 	}
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	defer w.Flush()
+
 	fmt.Fprintf(w, "Name\tStatus\n")
 	fmt.Fprintf(w, "----\t-------\n")
+
 	for _, s := range services {
 		fmt.Fprintf(w, "%s\t%s\n", s.Name, s.Status)
 	}
+
 	return nil
 }
 
 func runStop(args []string) error {
+	fset := flag.NewFlagSet("stop", flag.ExitOnError)
+
+	fset.Usage = func() {
+		fmt.Fprint(os.Stderr, `Usage: baxs stop [options] [serviceName...]
+
+Stop given service(s).
+If no service name is given, stop all services.
+
+Options:
+  -h, --help  Print this message
+
+`)
+	}
+
+	if err := fset.Parse(args); err != nil {
+		return err
+	}
+
 	return ipc.Stop(args...)
 }
 
 func runStart(args []string) error {
+	fset := flag.NewFlagSet("start", flag.ExitOnError)
+
+	fset.Usage = func() {
+		fmt.Fprint(os.Stderr, `Usage: baxs start [options] [serviceName...]
+
+Start given service(s).
+If no service name is given, start all services.
+
+Options:
+  -h, --help  Print this message
+
+`)
+	}
+
+	if err := fset.Parse(args); err != nil {
+		return err
+	}
+
 	return ipc.Start(args...)
 }

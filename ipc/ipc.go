@@ -13,15 +13,15 @@ const SocketAddr = "/tmp/baxs.sock"
 type Op uint8
 
 const (
-	OpLs Op = iota
+	OpPs Op = iota
 	OpStop
 	OpStart
 )
 
 func (op Op) String() string {
 	switch op {
-	case OpLs:
-		return "ls"
+	case OpPs:
+		return "ps"
 	case OpStop:
 		return "stop"
 	case OpStart:
@@ -41,13 +41,13 @@ type Response struct {
 	Data any `json:",omitempty"`
 }
 
-type LsResult struct {
+type PsResult struct {
 	Name   string
 	Status string
 }
 
-func Ls() ([]LsResult, error) {
-	rsp, err := execRequest(Request{Op: OpLs})
+func Ps() ([]PsResult, error) {
+	rsp, err := execRequest(Request{Op: OpPs})
 	if err != nil {
 		return nil, err
 	}
@@ -58,10 +58,10 @@ func Ls() ([]LsResult, error) {
 	if !ok {
 		return nil, errors.New("response data is not a slice")
 	}
-	res := make([]LsResult, 0, len(data))
+	res := make([]PsResult, 0, len(data))
 	for _, v := range data {
 		vv := v.(map[string]any)
-		res = append(res, LsResult{
+		res = append(res, PsResult{
 			Name:   vv["Name"].(string),
 			Status: vv["Status"].(string),
 		})
