@@ -7,10 +7,13 @@ vet:
 	go vet
 
 test:
-	go test -cover ./...
+	go test -cover -coverprofile cov.prof ./...
 
 clean:
 	go clean
+
+coverage: test
+	go tool cover -html cov.prof -o cov.html
 
 release: dev clean
 	CGO_ENABLED=0 go build -ldflags "-s -w"
