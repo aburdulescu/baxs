@@ -1,3 +1,2 @@
-/baxs
-/conf/testdata/fuzz/
-/logs
+baxs
+logs/

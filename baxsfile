@@ -1,0 +1,8 @@
+# command which runs forever
+sleeper: sleep infinity
+
+# runs and exists
+finder: find
+
+# invalid command
+#invalid: aaa bbb

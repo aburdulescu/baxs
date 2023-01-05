@@ -3,12 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"runtime/debug"
+	"text/tabwriter"
 
-	"bandr.me/p/baxs/internal/ipc"
-	"bandr.me/p/baxs/internal/waiter"
+	"baxs/ipc"
 )
 
 func main() {
@@ -18,105 +17,103 @@ func main() {
 	}
 }
 
-const usage = `usage: baxs command [flags]
+func mainErr() error {
+	flag.Usage = func() {
+		fmt.Fprint(os.Stderr, `Usage: baxs <command> [options]
+
+Options:
+  -h, --help  print this message
+  --version   print version information
 
 Commands:
-    help      print this message
-    version   print version information
-    daemon    start daemon
-    ls        list services
+  daemon  Start the daemon
+  ls      List available services
+  stop    Stop service(s)
+  start   Start service(s)
 
-Globals flags:
-    -h, --help    print this message
-    --version     print version information
-`
+Run 'baxs <command> -h' for more information about a command.
 
-func mainErr() error {
-	args := os.Args[1:]
+`)
+	}
+
+	printVersion := flag.Bool("version", false, "")
+
+	flag.Parse()
+
+	if *printVersion {
+		bi, _ := debug.ReadBuildInfo()
+		g := func(key string) string {
+			for _, v := range bi.Settings {
+				if v.Key == key {
+					return v.Value
+				}
+			}
+			return ""
+		}
+		fmt.Println(bi.Main.Version, bi.GoVersion, g("GOOS"), g("GOARCH"), g("vcs.revision"), g("vcs.time"))
+		return nil
+	}
+
+	args := flag.Args()
 
 	if len(args) < 1 {
-		fmt.Fprint(os.Stderr, usage)
-		return fmt.Errorf("missing command")
+		flag.Usage()
+		return fmt.Errorf("command was not specified")
 	}
 
 	cmd := args[0]
 	args = args[1:]
 
 	switch cmd {
-	case "help", "-h", "--help":
-		fmt.Print(usage)
-		return nil
-	case "version", "--version":
-		bi, ok := debug.ReadBuildInfo()
-		if !ok {
-			return fmt.Errorf("failed to read build info")
-		}
-		fmt.Println(
-			bi.Main.Version,
-			bi.GoVersion,
-			findBuildSetting(bi.Settings, "GOOS"),
-			findBuildSetting(bi.Settings, "GOARCH"),
-			findBuildSetting(bi.Settings, "vcs.revision"),
-			findBuildSetting(bi.Settings, "vcs.time"),
-		)
-		return nil
 	case "daemon":
 		return runDaemon(args)
 	case "ls":
 		return runLs(args)
+	case "stop":
+		return runStop(args)
+	case "start":
+		return runStart(args)
 	default:
 		return fmt.Errorf("unknown command '%s'", cmd)
 	}
 }
 
-func findBuildSetting(settings []debug.BuildSetting, key string) string {
-	for _, v := range settings {
-		if v.Key == key {
-			return v.Value
-		}
-	}
-	return ""
-}
-
 func runDaemon(args []string) error {
-	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
+	fset := flag.NewFlagSet("daemon", flag.ExitOnError)
 
-	fs := flag.NewFlagSet("daemon", flag.ContinueOnError)
-	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, `usage: baxs daemon [-h/--help] [flags]
+	fset.Usage = func() {
+		fmt.Fprint(os.Stderr, `Usage: baxs daemon [options]
 
-Flags:`)
-		fs.PrintDefaults()
-		os.Exit(1)
-	}
-	configPath := fs.String("c", "", "path to config file")
-	fs.Parse(args)
+Options:
+  -l  Base directory for logs
+  -f  Path to baxsfile
 
-	if *configPath == "" {
-		return fmt.Errorf("path to config file not specified")
+`)
 	}
 
-	waiter, err := waiter.New(*configPath)
+	logsDir := fset.String("l", "", "")
+	baxsfilePath := fset.String("f", "", "")
+
+	if err := fset.Parse(args); err != nil {
+		return err
+	}
+
+	if *logsDir == "" {
+		fset.Usage()
+		return fmt.Errorf("logs dir(-l) must be specified")
+	}
+
+	if *baxsfilePath == "" {
+		fset.Usage()
+		return fmt.Errorf("path to baxfile(-f) must be specified")
+	}
+
+	daemon, err := NewDaemon(*logsDir, *baxsfilePath)
 	if err != nil {
 		return err
 	}
 
-	ipcDaemon, err := ipc.NewDaemon()
-	if err != nil {
-		return err
-	}
-
-	go ipcDaemon.Start()
-
-	if err := waiter.Start(); err != nil {
-		return err
-	}
-
-	if err := waiter.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return daemon.Run()
 }
 
 func runLs(args []string) error {
@@ -124,6 +121,20 @@ func runLs(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(services)
+	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+	defer w.Flush()
+	fmt.Fprintf(w, "Name\tStatus\n")
+	fmt.Fprintf(w, "----\t-------\n")
+	for _, s := range services {
+		fmt.Fprintf(w, "%s\t%s\n", s.Name, s.Status)
+	}
 	return nil
+}
+
+func runStop(args []string) error {
+	return ipc.Stop(args...)
+}
+
+func runStart(args []string) error {
+	return ipc.Start(args...)
 }
