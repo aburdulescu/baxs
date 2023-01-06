@@ -1,17 +1,22 @@
-dev: clean build vet test
+dev: clean build vet lint test
+
+ci: clean build vet test
 
 build:
-	go build
+	CGO_ENABLED=0 go build
 
 vet:
 	go vet
-	golangci-lint run
 
 test:
 	go test -cover -coverprofile cov.prof ./...
 
 clean:
 	go clean
+
+lint:
+	which golangci-lint || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	golangci-lint run
 
 coverage: test
 	go tool cover -html cov.prof -o cov.html
