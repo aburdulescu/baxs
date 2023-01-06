@@ -24,8 +24,11 @@ jobs:
       with:
         go-version: 1.19.x
 
-    - name: All
+    - name: build/vet/test
       run: make ci
 
-    - name: Run golangci-lint
+    - name: golangci-lint
       uses: golangci/golangci-lint-action@v3
+
+    - name: fuzz
+      run: make fuzz

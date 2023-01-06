@@ -21,6 +21,9 @@ lint:
 coverage: test
 	go tool cover -html cov.prof -o cov.html
 
+fuzz:
+	go test -v -run=xxx -fuzz=. -fuzztime=10s ./internal/baxsfile
+
 release: dev clean
 	CGO_ENABLED=0 go build -ldflags "-s -w"
 	strip -s baxs

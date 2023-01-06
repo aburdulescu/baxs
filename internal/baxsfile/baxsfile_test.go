@@ -18,3 +18,27 @@ cmd2: fooz barz bazz
 	}
 	t.Log(procs)
 }
+
+func FuzzParse(f *testing.F) {
+	f.Add([]byte(`
+    #   akakakka
+
+# valid entry
+foo: bar baz
+
+# valid entry with leading whitespace
+  \t  foo: bar baz
+
+           \t\n
+
+
+
+
+
+
+`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		t.Log(Parse(strings.NewReader(string(data))))
+	})
+}
