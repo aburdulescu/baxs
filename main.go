@@ -7,7 +7,8 @@ import (
 	"runtime/debug"
 	"text/tabwriter"
 
-	"bandr.me/p/baxs/ipc"
+	"bandr.me/p/baxs/internal/daemon"
+	"bandr.me/p/baxs/internal/ipc"
 )
 
 func main() {
@@ -109,7 +110,7 @@ Options:
 		return fmt.Errorf("path to baxfile(-f) must be specified")
 	}
 
-	daemon, err := NewDaemon(*logsDir, *baxsfilePath)
+	daemon, err := daemon.New(*logsDir, *baxsfilePath)
 	if err != nil {
 		return err
 	}

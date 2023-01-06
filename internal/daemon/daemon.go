@@ -1,4 +1,4 @@
-package main
+package daemon
 
 import (
 	"encoding/json"
@@ -8,18 +8,19 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
-	"bandr.me/p/baxs/ipc"
+	"bandr.me/p/baxs/internal/baxsfile"
+	"bandr.me/p/baxs/internal/ipc"
+	"bandr.me/p/baxs/internal/process"
 )
 
 type Daemon struct {
-	procs       ProcessTable
+	ptable      *process.Table
 	ipcListener net.Listener
 }
 
-func NewDaemon(logsDir, baxsfilePath string) (*Daemon, error) {
+func New(logsDir, baxsfilePath string) (*Daemon, error) {
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
 		return nil, err
 	}
@@ -30,22 +31,18 @@ func NewDaemon(logsDir, baxsfilePath string) (*Daemon, error) {
 	}
 	defer f.Close()
 
-	procs, err := parseBaxsfile(f)
+	baxsfileEntries, err := baxsfile.Parse(f)
 	if err != nil {
 		return nil, err
 	}
 
-	ipcListener, err := NewIpcListener()
+	ipcListener, err := newIpcListener()
 	if err != nil {
 		return nil, err
 	}
 
 	d := &Daemon{
-		procs: ProcessTable{
-			procs:   procs,
-			logsDir: logsDir,
-		},
-
+		ptable:      process.NewTable(logsDir, baxsfileEntries),
 		ipcListener: ipcListener,
 	}
 
@@ -53,9 +50,9 @@ func NewDaemon(logsDir, baxsfilePath string) (*Daemon, error) {
 }
 
 func (d *Daemon) Run() error {
-	defer d.procs.wg.Wait()
+	defer d.ptable.Wait()
 
-	if err := d.procs.StartAll(); err != nil {
+	if err := d.ptable.StartAll(); err != nil {
 		return err
 	}
 
@@ -65,7 +62,7 @@ func (d *Daemon) Run() error {
 	go func() {
 		<-c
 		fmt.Println("[daemon] termination signal received")
-		d.procs.StopAll()
+		d.ptable.StopAll()
 		d.ipcListener.Close()
 	}()
 
@@ -74,7 +71,7 @@ func (d *Daemon) Run() error {
 	return nil
 }
 
-func NewIpcListener() (net.Listener, error) {
+func newIpcListener() (net.Listener, error) {
 	os.Remove(ipc.SocketAddr)
 	l, err := net.Listen("unix", ipc.SocketAddr)
 	if err != nil {
@@ -119,18 +116,18 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 	rsp := ipc.Response{}
 	switch req.Op {
 	case ipc.OpPs:
-		rsp.Data = d.procs.Ps()
+		rsp.Data = d.ptable.Ps()
 	case ipc.OpStop:
 		names, ok := req.Data.([]any)
 		if !ok {
 			rsp.Err = "not a []any"
 		} else {
 			if len(names) == 0 {
-				d.procs.StopAll()
+				d.ptable.StopAll()
 			} else {
 				for _, v := range names {
 					name, _ := v.(string)
-					if err := d.procs.Stop(name); err != nil {
+					if err := d.ptable.Stop(name); err != nil {
 						rsp.Err = err.Error()
 					}
 				}
@@ -142,13 +139,13 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 			rsp.Err = "not a []any"
 		} else {
 			if len(names) == 0 {
-				if err := d.procs.StartAll(); err != nil {
+				if err := d.ptable.StartAll(); err != nil {
 					rsp.Err = err.Error()
 				}
 			} else {
 				for _, v := range names {
 					name, _ := v.(string)
-					if err := d.procs.Start(name); err != nil {
+					if err := d.ptable.Start(name); err != nil {
 						rsp.Err = err.Error()
 					}
 				}
@@ -162,30 +159,4 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 		fmt.Printf("[ipcConn] error: %v\n", err)
 		return
 	}
-}
-
-func parseBaxsfile(r io.Reader) ([]Process, error) {
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	var procs []Process
-	for i, line := range strings.Split(string(data), "\n") {
-		line = strings.Trim(line, " \t")
-		if line == "" {
-			continue
-		}
-		if strings.HasPrefix(line, "#") {
-			continue
-		}
-		dot := strings.Index(line, ":")
-		if dot == -1 {
-			return nil, fmt.Errorf("failed to parse baxfile: line %d is missing :", i+1)
-		}
-		procs = append(procs, Process{
-			Name:    line[:dot],
-			Command: strings.Trim(line[dot+1:], " \t"),
-		})
-	}
-	return procs, nil
 }
