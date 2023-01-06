@@ -1,3 +1,6 @@
 baxs
 logs/
 readme.html
+cov.html
+cov.prof
+dist/
