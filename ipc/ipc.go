@@ -60,10 +60,12 @@ func Ps() ([]PsResult, error) {
 	}
 	res := make([]PsResult, 0, len(data))
 	for _, v := range data {
-		vv := v.(map[string]any)
+		vv, _ := v.(map[string]any)
+		name, _ := vv["Name"].(string)
+		status, _ := vv["Status"].(string)
 		res = append(res, PsResult{
-			Name:   vv["Name"].(string),
-			Status: vv["Status"].(string),
+			Name:   name,
+			Status: status,
 		})
 	}
 	return res, nil

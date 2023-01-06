@@ -59,7 +59,7 @@ func (p *Process) UpdateState() {
 		p.State = ProcessFinished
 		return
 	}
-	ws := ps.Sys().(syscall.WaitStatus)
+	ws, _ := ps.Sys().(syscall.WaitStatus)
 	if ws.Signaled() {
 		sig := ws.Signal()
 		if sig == syscall.SIGTERM || sig == syscall.SIGINT {
@@ -100,7 +100,7 @@ func (pt *ProcessTable) startAll() error {
 	for i, p := range pt.procs {
 		if err := pt.start(&pt.procs[i]); err != nil {
 			pt.stopAll()
-			return fmt.Errorf("[daemon] failed to start [%s]: %v", p.Name, err)
+			return fmt.Errorf("[daemon] failed to start [%s]: %w", p.Name, err)
 		}
 	}
 	return nil
@@ -133,6 +133,9 @@ func (pt *ProcessTable) start(p *Process) error {
 
 	args := strings.Split(p.Command, " ")
 
+	// TODO: maybe fail if args[0] is shell?
+
+	// #nosec G204 -- don't care right now, command comes from user configured file
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = logfile
 	cmd.Stderr = logfile

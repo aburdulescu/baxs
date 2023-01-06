@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -100,7 +101,7 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 	b := make([]byte, 4096)
 	n, err := conn.Read(b)
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return
 		}
 		fmt.Printf("[ipcConn] error: %v\n", err)
@@ -127,8 +128,9 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 			if len(names) == 0 {
 				d.procs.StopAll()
 			} else {
-				for _, name := range names {
-					if err := d.procs.Stop(name.(string)); err != nil {
+				for _, v := range names {
+					name, _ := v.(string)
+					if err := d.procs.Stop(name); err != nil {
 						rsp.Err = err.Error()
 					}
 				}
@@ -144,8 +146,9 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 					rsp.Err = err.Error()
 				}
 			} else {
-				for _, name := range names {
-					if err := d.procs.Start(name.(string)); err != nil {
+				for _, v := range names {
+					name, _ := v.(string)
+					if err := d.procs.Start(name); err != nil {
 						rsp.Err = err.Error()
 					}
 				}

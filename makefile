@@ -5,6 +5,7 @@ build:
 
 vet:
 	go vet
+	golangci-lint run
 
 test:
 	go test -cover -coverprofile cov.prof ./...

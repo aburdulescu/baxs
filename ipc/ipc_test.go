@@ -2,50 +2,55 @@ package ipc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"testing"
 )
 
-func fakeDaemon(t *testing.T, started, done chan struct{}, expected Response) {
-	t.Helper()
-
+func fakeDaemon(started, done chan struct{}, expected Response) {
 	defer func() { done <- struct{}{} }()
 
 	os.Remove(SocketAddr)
 	l, err := net.Listen("unix", SocketAddr)
 	if err != nil {
-		t.Fatal(err)
+		log.Println(err)
+		return
 	}
 	defer l.Close()
 
 	started <- struct{}{}
 
-	t.Log("listen..")
+	log.Println("listen..")
 	conn, err := l.Accept()
 	if err != nil {
-		t.Fatal(err)
+		log.Println(err)
+		return
 	}
 	defer conn.Close()
 
 	b := make([]byte, 4096)
 	n, err := conn.Read(b)
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return
 		}
-		t.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	var req Request
 	if err := json.Unmarshal(b[:n], &req); err != nil {
-		t.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	if err := json.NewEncoder(conn).Encode(expected); err != nil {
-		t.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 }
@@ -62,7 +67,7 @@ func TestPs(t *testing.T) {
 		done := make(chan struct{})
 
 		const expectedErr = "bad thing happened"
-		go fakeDaemon(t, started, done, Response{Err: expectedErr})
+		go fakeDaemon(started, done, Response{Err: expectedErr})
 
 		<-started
 		defer func() { <-done }()
@@ -76,7 +81,7 @@ func TestPs(t *testing.T) {
 		started := make(chan struct{})
 		done := make(chan struct{})
 
-		go fakeDaemon(t, started, done, Response{Data: "dummy"})
+		go fakeDaemon(started, done, Response{Data: "dummy"})
 
 		<-started
 		defer func() { <-done }()
@@ -91,11 +96,11 @@ func TestPs(t *testing.T) {
 		done := make(chan struct{})
 
 		expected := []PsResult{
-			PsResult{Name: "a", Status: "x"},
-			PsResult{Name: "b", Status: "y"},
+			{Name: "a", Status: "x"},
+			{Name: "b", Status: "y"},
 		}
 
-		go fakeDaemon(t, started, done, Response{Data: expected})
+		go fakeDaemon(started, done, Response{Data: expected})
 
 		<-started
 		defer func() { <-done }()
@@ -127,7 +132,7 @@ func TestStop(t *testing.T) {
 	started := make(chan struct{})
 	done := make(chan struct{})
 
-	go fakeDaemon(t, started, done, Response{})
+	go fakeDaemon(started, done, Response{})
 
 	<-started
 	defer func() { <-done }()
@@ -141,7 +146,7 @@ func TestStart(t *testing.T) {
 	started := make(chan struct{})
 	done := make(chan struct{})
 
-	go fakeDaemon(t, started, done, Response{})
+	go fakeDaemon(started, done, Response{})
 
 	<-started
 	defer func() { <-done }()
