@@ -20,7 +20,7 @@ lint:
 
 fieldalignment:
 	@which fieldalignment || go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest
-	fieldalignment ./...
+	fieldalignment -test=false ./...
 
 coverage: test
 	go tool cover -html cov.prof -o cov.html
