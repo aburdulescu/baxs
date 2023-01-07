@@ -157,13 +157,13 @@ func TestStart(t *testing.T) {
 
 func TestOp(t *testing.T) {
 	tests := []struct {
-		op   Op
 		name string
+		op   Op
 	}{
-		{OpPs, "ps"},
-		{OpStart, "start"},
-		{OpStop, "stop"},
-		{Op(255), "unknown"},
+		{"ps", OpPs},
+		{"start", OpStart},
+		{"stop", OpStop},
+		{"unknown", Op(255)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

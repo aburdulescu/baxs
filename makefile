@@ -6,7 +6,9 @@ build:
 	CGO_ENABLED=0 go build
 
 vet:
+	which fieldalignment || go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest
 	go vet
+	go vet -vettool $(shell which fieldalignment) ./...
 
 test:
 	go test -cover -coverprofile cov.prof ./...

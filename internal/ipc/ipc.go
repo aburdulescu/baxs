@@ -32,10 +32,8 @@ func (op Op) String() string {
 }
 
 type Request struct {
-	Op Op
-
-	// for start/stop
 	Names []string `json:",omitempty"`
+	Op    Op
 }
 
 type Response struct {
@@ -47,8 +45,8 @@ type Response struct {
 
 type PsResult struct {
 	Name   string
-	Pid    int
 	Status string
+	Pid    int
 }
 
 func Ps() ([]PsResult, error) {

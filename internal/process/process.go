@@ -41,9 +41,9 @@ func (s State) String() string {
 }
 
 type Process struct {
+	Cmd     *exec.Cmd
 	Name    string
 	Command string
-	Cmd     *exec.Cmd
 	State   State
 }
 
@@ -84,12 +84,10 @@ func (p *Process) Stop() {
 }
 
 type Table struct {
-	mu    sync.Mutex
-	procs []Process
-
-	wg sync.WaitGroup
-
 	logsDir string
+	procs   []Process
+	wg      sync.WaitGroup
+	mu      sync.Mutex
 }
 
 func NewTable(logsDir string, entries []baxsfile.Entry) *Table {
