@@ -48,6 +48,7 @@ type Process struct {
 }
 
 func (p *Process) UpdateState() {
+	p.State = Failed
 	if p.Cmd == nil {
 		return
 	}
@@ -55,7 +56,7 @@ func (p *Process) UpdateState() {
 		return
 	}
 	ps := p.Cmd.ProcessState
-	p.State = Failed
+	p.Cmd = nil
 	if ps.Success() {
 		p.State = Finished
 		return
@@ -63,7 +64,7 @@ func (p *Process) UpdateState() {
 	ws, _ := ps.Sys().(syscall.WaitStatus)
 	if ws.Signaled() {
 		sig := ws.Signal()
-		if sig == syscall.SIGTERM || sig == syscall.SIGINT {
+		if sig == syscall.SIGTERM || sig == syscall.SIGINT || sig == syscall.SIGKILL {
 			p.State = Stopped
 		}
 	}
@@ -76,9 +77,10 @@ func (p *Process) Stop() {
 	if p.State != Running {
 		return
 	}
-	if err := p.Cmd.Process.Kill(); err != nil {
+	if err := p.Cmd.Process.Signal(syscall.SIGTERM); err != nil {
 		fmt.Printf("[daemon] failed to kill [%s]: %v\n", p.Name, err)
 	}
+	// TODO: this may not actually kill it => wait to see if it stopped then send SIGKILL
 }
 
 type Table struct {
@@ -213,9 +215,14 @@ func (t *Table) Ps() []ipc.PsResult {
 	defer t.mu.Unlock()
 	var result []ipc.PsResult
 	for _, p := range t.procs {
+		pid := -1
+		if p.Cmd != nil && p.Cmd.Process != nil {
+			pid = p.Cmd.Process.Pid
+		}
 		result = append(result, ipc.PsResult{
 			Name:   p.Name,
 			Status: p.State.String(),
+			Pid:    pid,
 		})
 	}
 	return result

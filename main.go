@@ -144,11 +144,11 @@ Options:
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	defer w.Flush()
 
-	fmt.Fprintf(w, "Name\tStatus\n")
-	fmt.Fprintf(w, "----\t-------\n")
+	fmt.Fprintf(w, "Name\tPID\tStatus\n")
+	fmt.Fprintf(w, "----\t---\t-------\n")
 
 	for _, s := range services {
-		fmt.Fprintf(w, "%s\t%s\n", s.Name, s.Status)
+		fmt.Fprintf(w, "%s\t%d\t%s\n", s.Name, s.Pid, s.Status)
 	}
 
 	return nil

@@ -77,20 +77,6 @@ func TestPs(t *testing.T) {
 		}
 	})
 
-	t.Run("RspWithWrongDataType", func(t *testing.T) {
-		started := make(chan struct{})
-		done := make(chan struct{})
-
-		go fakeDaemon(started, done, Response{Data: "dummy"})
-
-		<-started
-		defer func() { <-done }()
-
-		if _, err := Ps(); err == nil {
-			t.Fatal("expected error")
-		}
-	})
-
 	t.Run("Ok", func(t *testing.T) {
 		started := make(chan struct{})
 		done := make(chan struct{})
@@ -100,7 +86,7 @@ func TestPs(t *testing.T) {
 			{Name: "b", Status: "y"},
 		}
 
-		go fakeDaemon(started, done, Response{Data: expected})
+		go fakeDaemon(started, done, Response{Ps: expected})
 
 		<-started
 		defer func() { <-done }()
@@ -115,8 +101,8 @@ func TestPs(t *testing.T) {
 				return fmt.Errorf("different len: %d %d", len(result), len(expected))
 			}
 			for i := range result {
-				if result[i] != expected[i] {
-					return fmt.Errorf("different element at index %d: %s %s", i, result[i], expected[i])
+				if err := psResultEqual(result[i], expected[i]); err != nil {
+					return fmt.Errorf("different element at index %d: %w", i, err)
 				}
 			}
 			return nil
@@ -126,6 +112,19 @@ func TestPs(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+}
+
+func psResultEqual(l, r PsResult) error {
+	if l.Name != r.Name {
+		return fmt.Errorf("different name: %s %s", l.Name, r.Name)
+	}
+	if l.Status != r.Status {
+		return fmt.Errorf("different status: %s %s", l.Status, r.Status)
+	}
+	if l.Pid != r.Pid {
+		return fmt.Errorf("different pid: %d %d", l.Pid, r.Pid)
+	}
+	return nil
 }
 
 func TestStop(t *testing.T) {

@@ -32,17 +32,22 @@ func (op Op) String() string {
 }
 
 type Request struct {
-	Op   Op
-	Data any `json:",omitempty"`
+	Op Op
+
+	// for start/stop
+	Names []string `json:",omitempty"`
 }
 
 type Response struct {
-	Err  string
-	Data any `json:",omitempty"`
+	Err string
+
+	// for ps
+	Ps []PsResult `json:",omitempty"`
 }
 
 type PsResult struct {
 	Name   string
+	Pid    int
 	Status string
 }
 
@@ -54,25 +59,11 @@ func Ps() ([]PsResult, error) {
 	if rsp.Err != "" {
 		return nil, errors.New(rsp.Err)
 	}
-	data, ok := rsp.Data.([]any)
-	if !ok {
-		return nil, errors.New("response data is not a slice")
-	}
-	res := make([]PsResult, 0, len(data))
-	for _, v := range data {
-		vv, _ := v.(map[string]any)
-		name, _ := vv["Name"].(string)
-		status, _ := vv["Status"].(string)
-		res = append(res, PsResult{
-			Name:   name,
-			Status: status,
-		})
-	}
-	return res, nil
+	return rsp.Ps, nil
 }
 
 func Stop(names ...string) error {
-	rsp, err := execRequest(Request{Op: OpStop, Data: names})
+	rsp, err := execRequest(Request{Op: OpStop, Names: names})
 	if err != nil {
 		return err
 	}
@@ -83,7 +74,7 @@ func Stop(names ...string) error {
 }
 
 func Start(names ...string) error {
-	rsp, err := execRequest(Request{Op: OpStart, Data: names})
+	rsp, err := execRequest(Request{Op: OpStart, Names: names})
 	if err != nil {
 		return err
 	}

@@ -116,38 +116,26 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 	rsp := ipc.Response{}
 	switch req.Op {
 	case ipc.OpPs:
-		rsp.Data = d.ptable.Ps()
+		rsp.Ps = d.ptable.Ps()
 	case ipc.OpStop:
-		names, ok := req.Data.([]any)
-		if !ok {
-			rsp.Err = "not a []any"
+		if len(req.Names) == 0 {
+			d.ptable.StopAll()
 		} else {
-			if len(names) == 0 {
-				d.ptable.StopAll()
-			} else {
-				for _, v := range names {
-					name, _ := v.(string)
-					if err := d.ptable.Stop(name); err != nil {
-						rsp.Err = err.Error()
-					}
+			for _, name := range req.Names {
+				if err := d.ptable.Stop(name); err != nil {
+					rsp.Err = err.Error()
 				}
 			}
 		}
 	case ipc.OpStart:
-		names, ok := req.Data.([]any)
-		if !ok {
-			rsp.Err = "not a []any"
+		if len(req.Names) == 0 {
+			if err := d.ptable.StartAll(); err != nil {
+				rsp.Err = err.Error()
+			}
 		} else {
-			if len(names) == 0 {
-				if err := d.ptable.StartAll(); err != nil {
+			for _, name := range req.Names {
+				if err := d.ptable.Start(name); err != nil {
 					rsp.Err = err.Error()
-				}
-			} else {
-				for _, v := range names {
-					name, _ := v.(string)
-					if err := d.ptable.Start(name); err != nil {
-						rsp.Err = err.Error()
-					}
 				}
 			}
 		}
