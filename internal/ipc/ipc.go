@@ -32,8 +32,10 @@ func (op Op) String() string {
 }
 
 type Request struct {
+	// for start/stop
 	Names []string `json:",omitempty"`
-	Op    Op
+
+	Op Op
 }
 
 type Response struct {
