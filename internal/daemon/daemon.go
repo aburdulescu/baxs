@@ -62,7 +62,7 @@ func (d *Daemon) Run() error {
 	go func() {
 		<-c
 		fmt.Println("[daemon] termination signal received")
-		d.ptable.StopAll()
+		d.ptable.StopAll(false)
 		d.ipcListener.Close()
 	}()
 
@@ -118,22 +118,22 @@ func (d *Daemon) handleIpcConn(conn net.Conn) {
 	case ipc.OpPs:
 		rsp.Ps = d.ptable.Ps()
 	case ipc.OpStop:
-		if len(req.Names) == 0 {
-			d.ptable.StopAll()
+		if len(req.Stop.Names) == 0 {
+			d.ptable.StopAll(req.Stop.Force)
 		} else {
-			for _, name := range req.Names {
-				if err := d.ptable.Stop(name); err != nil {
+			for _, name := range req.Stop.Names {
+				if err := d.ptable.Stop(name, req.Stop.Force); err != nil {
 					rsp.Err = err.Error()
 				}
 			}
 		}
 	case ipc.OpStart:
-		if len(req.Names) == 0 {
+		if len(req.Start.Names) == 0 {
 			if err := d.ptable.StartAll(); err != nil {
 				rsp.Err = err.Error()
 			}
 		} else {
-			for _, name := range req.Names {
+			for _, name := range req.Start.Names {
 				if err := d.ptable.Start(name); err != nil {
 					rsp.Err = err.Error()
 				}

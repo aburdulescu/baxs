@@ -165,15 +165,17 @@ If no service name is given, stop all services.
 
 Options:
   -h, --help  Print this message
-
+  -k          Force stop the service(s); i.e. send SIGKILL
 `)
 	}
+
+	force := fset.Bool("k", false, "")
 
 	if err := fset.Parse(args); err != nil {
 		return err
 	}
 
-	return ipc.Stop(args...)
+	return ipc.Stop(*force, fset.Args()...)
 }
 
 func runStart(args []string) error {
@@ -195,5 +197,5 @@ Options:
 		return err
 	}
 
-	return ipc.Start(args...)
+	return ipc.Start(fset.Args()...)
 }

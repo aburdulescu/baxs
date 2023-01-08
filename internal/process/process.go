@@ -70,17 +70,20 @@ func (p *Process) UpdateState() {
 	}
 }
 
-func (p *Process) Stop() {
+func (p *Process) Stop(force bool) {
 	if p.Cmd == nil {
 		return
 	}
 	if p.State != Running {
 		return
 	}
-	if err := p.Cmd.Process.Signal(syscall.SIGTERM); err != nil {
-		fmt.Printf("[daemon] failed to kill [%s]: %v\n", p.Name, err)
+	sig := syscall.SIGTERM
+	if force {
+		sig = syscall.SIGKILL
 	}
-	// TODO: this may not actually kill it => wait to see if it stopped then send SIGKILL
+	if err := p.Cmd.Process.Signal(sig); err != nil {
+		fmt.Printf("[daemon] failed to send signal %d [%s]: %v\n", sig, p.Name, err)
+	}
 }
 
 type Table struct {
@@ -118,7 +121,7 @@ func (t *Table) StartAll() error {
 func (t *Table) startAll() error {
 	for i, p := range t.procs {
 		if err := t.start(&t.procs[i]); err != nil {
-			t.stopAll()
+			t.stopAll(false)
 			return fmt.Errorf("[daemon] failed to start [%s]: %w", p.Name, err)
 		}
 	}
@@ -184,24 +187,24 @@ func (t *Table) start(p *Process) error {
 	return nil
 }
 
-func (t *Table) StopAll() {
+func (t *Table) StopAll(force bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.stopAll()
+	t.stopAll(force)
 }
 
-func (t *Table) stopAll() {
+func (t *Table) stopAll(force bool) {
 	for _, p := range t.procs {
-		p.Stop()
+		p.Stop(force)
 	}
 }
 
-func (t *Table) Stop(name string) error {
+func (t *Table) Stop(name string, force bool) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for _, p := range t.procs {
 		if p.Name == name {
-			p.Stop()
+			p.Stop(force)
 			return nil
 		}
 	}

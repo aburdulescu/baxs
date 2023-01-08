@@ -136,7 +136,7 @@ func TestStop(t *testing.T) {
 	<-started
 	defer func() { <-done }()
 
-	if err := Stop(); err != nil {
+	if err := Stop(false); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -172,4 +172,19 @@ func TestOp(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWire(t *testing.T) {
+	t.Run("EmptyRequest", func(t *testing.T) {
+		var r Request
+		if err := json.NewEncoder(os.Stdout).Encode(r); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("EmptyResponse", func(t *testing.T) {
+		var r Response
+		if err := json.NewEncoder(os.Stdout).Encode(r); err != nil {
+			t.Fatal(err)
+		}
+	})
 }

@@ -32,8 +32,8 @@ func (op Op) String() string {
 }
 
 type Request struct {
-	// for start/stop
-	Names []string `json:",omitempty"`
+	Stop  *StopInput  `json:",omitempty"`
+	Start *StartInput `json:",omitempty"`
 
 	Op Op
 }
@@ -41,8 +41,16 @@ type Request struct {
 type Response struct {
 	Err string
 
-	// for ps
 	Ps []PsResult `json:",omitempty"`
+}
+
+type StopInput struct {
+	Names []string
+	Force bool
+}
+
+type StartInput struct {
+	Names []string
 }
 
 type PsResult struct {
@@ -62,8 +70,15 @@ func Ps() ([]PsResult, error) {
 	return rsp.Ps, nil
 }
 
-func Stop(names ...string) error {
-	rsp, err := execRequest(Request{Op: OpStop, Names: names})
+func Stop(force bool, names ...string) error {
+	req := Request{
+		Op: OpStop,
+		Stop: &StopInput{
+			Force: force,
+			Names: names,
+		},
+	}
+	rsp, err := execRequest(req)
 	if err != nil {
 		return err
 	}
@@ -74,7 +89,11 @@ func Stop(names ...string) error {
 }
 
 func Start(names ...string) error {
-	rsp, err := execRequest(Request{Op: OpStart, Names: names})
+	req := Request{
+		Op:    OpStart,
+		Start: &StartInput{Names: names},
+	}
+	rsp, err := execRequest(req)
 	if err != nil {
 		return err
 	}
