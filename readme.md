@@ -2,6 +2,12 @@
 
 Background service supervisor.
 
+## Install
+
+`go install bandr.me/p/baxs@latest` if you have [Go](https://go.dev/doc/install) installed.
+
+Or download a precompiled binary from the [latest](https://github.com/aburdulescu/baxs/releases/latest) release.
+
 ## Config file syntax(`baxsfile`)
 
 The config file consists of lines of text.
