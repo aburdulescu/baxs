@@ -11,6 +11,8 @@ type Entry struct {
 	Command string
 }
 
+const spaces = " \t"
+
 func Parse(r io.Reader) ([]Entry, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -18,7 +20,7 @@ func Parse(r io.Reader) ([]Entry, error) {
 	}
 	var entries []Entry
 	for i, line := range strings.Split(string(data), "\n") {
-		line = strings.Trim(line, " \t")
+		line = strings.Trim(line, spaces)
 		if line == "" {
 			continue
 		}
@@ -30,8 +32,8 @@ func Parse(r io.Reader) ([]Entry, error) {
 			return nil, fmt.Errorf("failed to parse baxfile: line %d is missing ':'", i+1)
 		}
 		entries = append(entries, Entry{
-			Name:    line[:dot],
-			Command: strings.Trim(line[dot+1:], " \t"),
+			Name:    strings.Trim(line[:dot], spaces),
+			Command: strings.Trim(line[dot+1:], spaces),
 		})
 	}
 	return entries, nil
