@@ -5,7 +5,7 @@ ci: clean build vet test
 generate:
 	go generate ./...
 
-build: generate
+build:
 	CGO_ENABLED=0 go build
 
 vet:
