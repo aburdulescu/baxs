@@ -13,6 +13,7 @@ import (
 	"bandr.me/p/baxs/internal/ipc"
 )
 
+//go:generate stringer -type=State
 type State uint8
 
 const (
@@ -22,23 +23,6 @@ const (
 	Stopped
 	Finished
 )
-
-func (s State) String() string {
-	switch s {
-	case Idle:
-		return "idle"
-	case Failed:
-		return "failed"
-	case Running:
-		return "running"
-	case Stopped:
-		return "stopped"
-	case Finished:
-		return "finished"
-	default:
-		return fmt.Sprintf("invalid state: %d", s)
-	}
-}
 
 type Process struct {
 	Cmd     *exec.Cmd

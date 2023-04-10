@@ -2,7 +2,10 @@ dev: clean build vet lint test
 
 ci: clean build vet test
 
-build:
+generate:
+	go generate ./...
+
+build: generate
 	CGO_ENABLED=0 go build
 
 vet:
@@ -31,3 +34,6 @@ fuzz:
 release: dev clean
 	CGO_ENABLED=0 go build -ldflags "-s -w"
 	strip -s baxs
+
+misc:
+	go install golang.org/x/tools/cmd/stringer@latest

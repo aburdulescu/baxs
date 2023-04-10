@@ -155,25 +155,6 @@ func TestStart(t *testing.T) {
 	}
 }
 
-func TestOp(t *testing.T) {
-	tests := []struct {
-		name string
-		op   Op
-	}{
-		{"ps", OpPs},
-		{"start", OpStart},
-		{"stop", OpStop},
-		{"unknown", Op(255)},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if v := test.op.String(); v != test.name {
-				t.Fatalf("expected %s, have %s", test.name, v)
-			}
-		})
-	}
-}
-
 func TestWire(t *testing.T) {
 	t.Run("EmptyRequest", func(t *testing.T) {
 		var r Request

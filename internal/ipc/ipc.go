@@ -10,6 +10,7 @@ import (
 
 const SocketAddr = "/tmp/baxs.sock"
 
+//go:generate stringer -type=Op
 type Op uint8
 
 const (
@@ -17,19 +18,6 @@ const (
 	OpStop
 	OpStart
 )
-
-func (op Op) String() string {
-	switch op {
-	case OpPs:
-		return "ps"
-	case OpStop:
-		return "stop"
-	case OpStart:
-		return "start"
-	default:
-		return "unknown"
-	}
-}
 
 type Request struct {
 	Stop  *StopInput  `json:",omitempty"`
